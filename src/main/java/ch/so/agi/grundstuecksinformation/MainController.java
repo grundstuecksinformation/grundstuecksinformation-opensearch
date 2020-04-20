@@ -56,7 +56,32 @@ public class MainController {
         return new ResponseEntity<String>("opensearch endpoint", HttpStatus.OK);
     }
     
-    // See grundstuecksinformation-client for opensearchdescription.xml creation.
+    @GetMapping(value = "/opensearchdescription.xml", produces=MediaType.APPLICATION_XML_VALUE)
+    public ResponseEntity<OpenSearchDescription> getOpenSearchDescription() {
+        OpenSearchDescription openSearchDescription = new OpenSearchDescription();
+        openSearchDescription.setShortName("grundstuecksinformation.ch");
+        openSearchDescription.setLongName("grundstuecksinformation.ch");
+        Image image = new Image();
+        image.setType("image/x-icon");
+        image.setWidth(BigInteger.valueOf(16));
+        image.setHeight(BigInteger.valueOf(16));
+        image.setValue("data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTAADJP8IAiL/NAEh/0kBIf9JAyP/JgMk/whxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAAMk/wgBIf9dASD/vgUn/+cTM//4EzP/+AUn/+cBIP+rAiL/NHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAAMk/wgBH/+OEzP/+G2A//++xv//3uL//9PY//+irv//PFX//wUn/+cBIf9dcWlMAHFpTABxaUwAcWlMAHFpTAABIP92EzP/+KKu///6+///7vD//8rR///T2P//+vv//+7w//9tgP//BSf/5wIi/zRxaUwAcWlMAHFpTAADI/8mBSf/546c///6+///sLr//zxV//8QMf//EDH//1Bn///e4v//7vD//1Bn//8BIP+rAyT/CHFpTABxaUwAASH/XSZC///e4v//09j//yZC//8CIv//AiL//wIi//8CIv//UGf///r7//+irv//BSf/5wMj/yZxaUwAcWlMAAEf/448Vf//+vv//46c//8CIv//AiL//wIi//8CIv//AiL//xAx///T2P//09j//xMz//gBIf9JcWlMAHFpTAABH/+OUGf///r7//+OnP//AiL//wIi//8CIv//AiL//wIi//8QMf//ytH//9PY//8TM//4ASH/SXFpTABxaUwAASD/diZC///u8P//vsb//xAx//8CIv//AiL//wIi//8CIv//PFX//+7w//+wuv//BSf/5wIi/zRxaUwAcWlMAAIi/zQFJ//noq7///r7//+OnP//EDH//wIi//8CIv//JkL//77G///6+///UGf//wEg/74DJP8IcWlMAHFpTABxaUwAAR//jiZC///K0f//+vv//8rR//+irv//oq7//97i///6+///jpz//xMz//gBIf9JcWlMAHFpTABxaUwAcWlMAAMk/xkBIP+rJkL//46c///e4v//+vv//+7w///T2P//bYD//xMz//gBIP92AyT/CHFpTABxaUwAcWlMAHFpTABxaUwAAyT/GQEf/44FJ//nJkL//zxV//88Vf//EzP/+AIi/84BIf9dAyT/CHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAAyP/JgEh/10BIP92ASD/dgEh/0kDJP8ZcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwAcWlMAHFpTABxaUwA//8AAPgfAADgDwAAwAcAAMADAACAAQAAgAEAAIABAACAAQAAgAEAAIABAADAAwAAwAMAAOAHAAD4HwAA//8AAA==");
+        openSearchDescription.getImages().add(image);
+        
+        Url searchUrl = new Url();
+        searchUrl.setType("text/html");
+        searchUrl.setMethod("get");
+        searchUrl.setTemplate(getHost() + "/search?q={searchTerms}");
+        openSearchDescription.getUrls().add(searchUrl);
+
+        Url suggestJsonUrl = new Url();
+        suggestJsonUrl.setType("application/x-suggestions+json");
+        suggestJsonUrl.setMethod("get");
+        suggestJsonUrl.setTemplate(getHost() + "/search/suggestions?q={searchTerms}");
+        openSearchDescription.getUrls().add(suggestJsonUrl);
+                
+        return new ResponseEntity<OpenSearchDescription>(openSearchDescription, HttpStatus.OK);
+    }
     
     @RequestMapping(
             value = "/search/suggestions", 
@@ -158,6 +183,8 @@ public class MainController {
             }
         }
      
+        // TODO
+        // Schöneres HTML mit Links auf grundstueckinformation.ch?egrid=....
         model.addAttribute("searchResults", searchResults);
         return "search.result.html";        
     }
@@ -176,5 +203,9 @@ public class MainController {
         String egrid = node.get("properties").get("egrid").textValue();
 
         return egrid;
+    }
+    
+    private String getHost() {
+        return ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
     }
 }
