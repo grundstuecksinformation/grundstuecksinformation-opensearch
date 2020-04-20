@@ -1,0 +1,146 @@
+plugins {
+	id 'org.springframework.boot' version '2.2.6.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+	id 'java'
+    id "com.bmuschko.docker-remote-api" version "6.1.2"
+}
+
+apply from: "gradle/versioning.gradle"
+
+group = 'ch.so.agi'
+sourceCompatibility = '1.8'
+
+configurations {
+    jaxb
+	developmentOnly
+	runtimeClasspath {
+		extendsFrom developmentOnly
+	}
+}
+
+repositories {
+    jcenter()
+	mavenCentral()
+}
+
+task genJaxb {
+    ext.sourcesDir = "${buildDir}/generated-sources/jaxb"
+    ext.classesDir = "${buildDir}/classes/jaxb"
+    ext.schema = "src/main/resources/xsd/opensearch.xsd"
+
+    outputs.dir classesDir
+
+    doLast() {
+        project.ant {
+            taskdef name: "xjc", classname: "com.sun.tools.xjc.XJCTask",
+                    classpath: configurations.jaxb.asPath
+            mkdir(dir: sourcesDir)
+            mkdir(dir: classesDir)
+
+            xjc(destdir: sourcesDir, schema: schema, binding: "src/main/resources/xsd/binding.xjb") {
+                arg(value: "-extension")
+                produces(dir: sourcesDir, includes: "**/*.java")
+            }
+
+            javac(destdir: classesDir, source: 8, target: 8, debug: true,
+                    debugLevel: "lines,vars,source", includeantruntime: false,
+                    classpath: configurations.jaxb.asPath) {
+                src(path: sourcesDir)
+                include(name: "**/*.java")
+                include(name: "*.java")
+            }
+
+            copy(todir: classesDir) {
+                fileset(dir: sourcesDir, erroronmissingdir: false) {
+                    exclude(name: "**/*.java")
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework:spring-oxm:5.2.5.RELEASE'
+    jaxb("org.glassfish.jaxb:jaxb-xjc:2.3.2")
+    compile(files(genJaxb.classesDir).builtBy(genJaxb))
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}
+
+test {
+	useJUnitPlatform()
+}
+
+import com.bmuschko.gradle.docker.tasks.image.Dockerfile
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerLogsContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerStopContainer
+import com.bmuschko.gradle.docker.tasks.container.DockerCreateContainer.ExposedPort
+import java.text.SimpleDateFormat
+
+docker {
+    registryCredentials {
+        username = System.env.DOCKER_USERNAME
+        password = System.env.DOCKER_PASSWORD
+    }
+}
+
+task buildDockerImage(type: DockerBuildImage) {
+    description = "Build docker image."
+    inputDir = project.rootDir
+    images.add("sogis/grundstuecksinformation-opensearch:"+version.toString())
+    images.add("sogis/grundstuecksinformation-opensearch")
+    labels = ["grundstuecksinformation-opensearch": new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()), 
+            "grundstuecksinformation-opensearch.git_commit": getCheckedOutGitCommitHash(), 
+            "grundstuecksinformation-opensearch.build": version.toString()]
+}
+
+// TODO: since images is a set, we do not need a loop anymore.
+def tags = ["latest", version]
+
+tags.each { tag ->
+    def imageTag = tag.toString()
+    task "pushDockerImage_$imageTag"(dependsOn: 'buildDockerImage', type: DockerPushImage) {
+        description = "Push docker image to hub.docker.com: $imageTag"
+        images = ["sogis/grundstuecksinformation-opensearch:$imageTag"]
+    }
+}
+
+task pushDockerImages() {
+    description = "Push docker images to hub.docker.com."
+    dependsOn {
+        tasks.findAll { task -> task.name.startsWith('pushDockerImage_') }
+    }    
+}
+
+def getCheckedOutGitCommitHash() {
+    'git log -1 --pretty=%H'.execute().text.trim()
+}
+
+task versionTxt()  {
+    outputs.upToDateWhen { false }
+    doLast {
+        new File("version.txt").text = """
+Version: $version
+Revision: ${getCheckedOutGitCommitHash()}
+Buildtime: ${new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date())}
+Application-name: grundstuecksinformation-opensearch
+"""
+    }
+}
+task copyVersionTxt(type: Copy) {
+    from "version.txt"
+    into "src/main/resources/static/"
+}
+copyVersionTxt.dependsOn(versionTxt)
+build.dependsOn(copyVersionTxt)
+classes.dependsOn(copyVersionTxt)
+
