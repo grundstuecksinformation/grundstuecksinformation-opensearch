@@ -59,11 +59,15 @@ task genJaxb {
     }
 }
 
+// TODO: analog wie beim oereb-web-service
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework:spring-oxm:5.2.5.RELEASE'
+    compile group: 'javax.xml.bind',name:'jaxb-api', version:'2.3.1'
+    compile group: 'com.sun.xml.bind',name:'jaxb-core', version:'2.3.0.1'
+    compile group: 'com.sun.xml.bind',name:'jaxb-impl', version:'2.3.2'    
     jaxb("org.glassfish.jaxb:jaxb-xjc:2.3.2")
     compile(files(genJaxb.classesDir).builtBy(genJaxb))
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'

@@ -16,7 +16,7 @@
 
 <body>
 	<div th:each="searchResult: ${searchResults}">
-	    <div th:text="${searchResult.label}"></div>
+	    <div><a th:href="'http://grundstuecksinformation.ch?egrid='+${searchResult.egrid}" target="_blank"><span th:text="'http://grundstuecksinformation.ch?egrid='+${searchResult.egrid}"></span></a></div>
 	</div>
       
 </body>
