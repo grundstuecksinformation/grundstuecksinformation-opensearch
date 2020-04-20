@@ -16,6 +16,6 @@ RUN chown -R 1001:0 /home/grundstuecksinformation && \
 
 USER 1001
 
-ENTRYPOINT ["java","-XX:MaxRAMPercentage=80.0","-Djava.security.egd=file:/dev/./urandom","-jar","/home/grundstuecksinformation/app.jar"]
+ENTRYPOINT ["java","-XX:MaxRAMPercentage=80.0","-cp","app:app/lib/*","ch.so.agi.grundstuecksinformation.OpensearchApplication"]
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=60s CMD curl http://localhost:8080/actuator/health
