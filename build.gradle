@@ -76,6 +76,18 @@ test {
 	useJUnitPlatform()
 }
 
+task deleteFilesJarDir(type: Delete) {
+    delete fileTree("${buildDir}/dependency/")
+    delete file("${buildDir}/dependency/")
+}
+
+task unzipJar(type: Copy) {
+    from zipTree(file("${buildDir}/libs/grundstuecksinformation-opensearch-"+version+".jar"))
+    into file("${buildDir}/dependency/")
+}
+unzipJar.dependsOn(deleteFilesJarDir)
+bootJar.finalizedBy(unzipJar)
+
 import com.bmuschko.gradle.docker.tasks.image.Dockerfile
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage

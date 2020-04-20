@@ -7,8 +7,10 @@ EXPOSE 8080
 
 WORKDIR /home/grundstuecksinformation
 
-ARG JAR_FILE
-COPY ${JAR_FILE} /home/grundstuecksinformation/app.jar
+ARG DEPENDENCY=build/dependency
+COPY ${DEPENDENCY}/BOOT-INF/lib /home/grundstuecksinformation/app/lib
+COPY ${DEPENDENCY}/META-INF /home/grundstuecksinformation/app/META-INF
+COPY ${DEPENDENCY}/BOOT-INF/classes /home/grundstuecksinformation/app
 RUN chown -R 1001:0 /home/grundstuecksinformation && \
     chmod -R g=u /home/grundstuecksinformation
 
